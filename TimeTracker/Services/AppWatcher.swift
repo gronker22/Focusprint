@@ -86,7 +86,7 @@ class AppWatcher: ObservableObject {
 
     // MARK: — Browser tab tracking
 
-    // When Chrome is frontmost, split sessions per website instead of
+    // When Chrome is frontmost, split sessions per tab title instead of
     // lumping everything under "Google Chrome"
     private func refreshBrowserTab() {
         guard
@@ -95,10 +95,10 @@ class AppWatcher: ObservableObject {
             let bundleID = frontmost.bundleIdentifier,
             bundleID == BrowserTabReader.chromeBundleID,
             !excludedBundleIDs.contains(bundleID),
-            let domain = BrowserTabReader.activeChromeDomain()
+            let tab = BrowserTabReader.activeChromeTab()
         else { return }
 
-        let tabName = "\(domain) · Google Chrome"
+        let tabName = "\(tab) · Google Chrome"
         guard tabName != currentSession?.appName else { return }
 
         closeCurrentSession(at: Date())

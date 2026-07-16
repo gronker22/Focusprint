@@ -55,9 +55,11 @@ extension AppWatcher {
 
         var csv = "date,appName,duration(s)\n"
         for session in fetchSessions(since: .distantPast) {
-            let name = session.appName.contains(",")
-                ? "\"\(session.appName)\""
-                : session.appName
+            // Tab titles can contain commas AND quotes — full RFC 4180 escaping
+            var name = session.appName
+            if name.contains(",") || name.contains("\"") || name.contains("\n") {
+                name = "\"\(name.replacingOccurrences(of: "\"", with: "\"\""))\""
+            }
             csv += "\(formatter.string(from: session.startTime)),\(name),\(Int(session.duration))\n"
         }
 
