@@ -111,27 +111,23 @@ struct MenuBarPopoverView: View {
 
     // MARK: — Content
 
+    // Fixed-height container with a plain crossfade. Move/slide transitions
+    // around a ScrollView break NSPopover's height measurement — the list
+    // area collapses to zero after a tab switch.
     private var content: some View {
         ZStack {
             switch viewMode {
             case .today:
                 appListView
-                    .transition(slideTransition(from: .leading))
+                    .transition(.opacity)
             case .week:
                 ChartView()
-                    .transition(slideTransition(from: .trailing))
+                    .transition(.opacity)
             }
         }
-        .animation(reduceMotion ? nil : .spring(duration: 0.35), value: viewMode)
-    }
-
-    private func slideTransition(from edge: Edge) -> AnyTransition {
-        reduceMotion
-            ? .opacity
-            : .asymmetric(
-                insertion: .move(edge: edge).combined(with: .opacity),
-                removal: .move(edge: edge == .leading ? .trailing : .leading).combined(with: .opacity)
-            )
+        .frame(width: 340, height: 380, alignment: .top)
+        .clipped()
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: viewMode)
     }
 
     private var appListView: some View {
@@ -145,8 +141,7 @@ struct MenuBarPopoverView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     // Plain VStack on purpose: a LazyVStack loses its rows when
@@ -165,7 +160,6 @@ struct MenuBarPopoverView: View {
                     .animation(reduceMotion ? nil : .spring(duration: 0.5),
                                value: watcher.todaySummary.map(\.app))
                 }
-                .frame(maxHeight: 360)
             }
         }
         // Coming back from the Week tab: re-pull from SwiftData immediately
