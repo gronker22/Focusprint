@@ -70,6 +70,7 @@ struct DashboardView: View {
         .onChange(of: rangeDays) { _, _ in reload() }
         .onChange(of: streakGoal) { _, _ in reload() }
         .onReceive(refreshTimer) { _ in reloadIfVisible() }
+        .onReceive(NotificationCenter.default.publisher(for: .categoriesChanged)) { _ in reload() }
     }
 
     private func reload() {

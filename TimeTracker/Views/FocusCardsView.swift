@@ -12,6 +12,8 @@ struct FocusCardsView: View {
     let golden: FocusFeatures.GoldenWindow
     let villain: FocusFeatures.Villain
 
+    @State private var showDetail = false
+
     var body: some View {
         VStack(spacing: 16) {
             HStack(alignment: .top, spacing: 16) {
@@ -55,7 +57,19 @@ struct FocusCardsView: View {
     // MARK: — Focus score
 
     private func scoreCard(_ stats: FocusDayStats) -> some View {
-        card("Focus today", subtitle: "40% sustain · 35% switching · 25% deep work") {
+        Button {
+            showDetail = true
+        } label: {
+            scoreCardBody(stats)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showDetail) {
+            FocusDetailView()
+        }
+    }
+
+    private func scoreCardBody(_ stats: FocusDayStats) -> some View {
+        card("Focus today", subtitle: "40% sustain · 35% switching · 25% deep work — click to customize categories") {
             HStack(alignment: .top, spacing: 20) {
                 VStack(spacing: 2) {
                     Text(stats.hasEnoughData ? "\(stats.score)" : "—")

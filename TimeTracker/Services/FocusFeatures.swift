@@ -92,6 +92,37 @@ enum FocusFeatures {
         return "\(display)\(hh < 12 ? "am" : "pm")"
     }
 
+    // MARK: — Distraction leaderboard (this month's attention drains, ranked
+    // by how often you switch into them, then by time sunk)
+
+    struct DistractionEntry: Identifiable {
+        let key: String
+        let switchIns: Int
+        let seconds: TimeInterval
+        var id: String { key }
+    }
+
+    static func distractionLeaderboard(byDay: [Date: [AppSessionModel]], now: Date = Date()) -> [DistractionEntry] {
+        let calendar = Calendar.current
+        guard let monthStart = calendar.date(
+            from: calendar.dateComponents([.year, .month], from: now)
+        ) else { return [] }
+
+        var switchIns: [String: Int] = [:]
+        var seconds: [String: TimeInterval] = [:]
+        for (day, sessions) in byDay where day >= monthStart {
+            let blocks = FocusScore.blocks(from: sessions)
+            for (i, block) in blocks.enumerated() where block.category == .distraction {
+                seconds[block.categoryKey, default: 0] += block.duration
+                if i > 0 { switchIns[block.categoryKey, default: 0] += 1 }
+            }
+        }
+
+        return Set(switchIns.keys).union(seconds.keys)
+            .map { DistractionEntry(key: $0, switchIns: switchIns[$0] ?? 0, seconds: seconds[$0] ?? 0) }
+            .sorted { ($0.switchIns, $0.seconds) > ($1.switchIns, $1.seconds) }
+    }
+
     // MARK: — App Villain of the month (the distraction you switch into most,
     // as a share of all context switches)
 

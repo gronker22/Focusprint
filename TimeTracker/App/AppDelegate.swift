@@ -85,11 +85,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func updateMenuBarLabel() {
         guard let button = statusItem?.button else { return }
-        if UserDefaults.standard.bool(forKey: "showMenuBarTotal") {
-            button.title = " " + formatDuration(watcher.totalTimeToday)
-        } else {
-            button.title = ""
+        let defaults = UserDefaults.standard
+        let title = NSMutableAttributedString()
+
+        // Focus score first, colored, so it's readable without opening anything
+        let showScore = defaults.object(forKey: "showMenuBarScore") as? Bool ?? true
+        if showScore {
+            let todayStart = Calendar.current.startOfDay(for: Date())
+            let stats = FocusScore.analyze(watcher.fetchSessions(since: todayStart))
+            if stats.hasEnoughData {
+                let color: NSColor = stats.score >= 60 ? .systemGreen
+                    : stats.score >= 30 ? .systemOrange : .systemRed
+                title.append(NSAttributedString(
+                    string: " \(stats.score)",
+                    attributes: [
+                        .foregroundColor: color,
+                        .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
+                    ]
+                ))
+            }
         }
+        if defaults.bool(forKey: "showMenuBarTotal") {
+            title.append(NSAttributedString(
+                string: " \(formatDuration(watcher.totalTimeToday))",
+                attributes: [
+                    .foregroundColor: NSColor.secondaryLabelColor,
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .regular),
+                ]
+            ))
+        }
+        button.attributedTitle = title
         // Keeps the title from overlapping the clock symbol
         button.imagePosition = .imageLeading
     }

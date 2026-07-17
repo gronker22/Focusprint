@@ -3,6 +3,8 @@ import Foundation
 extension Notification.Name {
     // Posted by the popover; AppDelegate owns the dashboard window
     static let openDashboard = Notification.Name("openDashboard")
+    // Posted when category overrides change so cached analytics refresh
+    static let categoriesChanged = Notification.Name("categoriesChanged")
 }
 
 /// Formats a TimeInterval as "2h 14m" or "45m" or "< 1m"

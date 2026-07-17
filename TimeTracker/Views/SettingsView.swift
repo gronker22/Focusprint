@@ -7,6 +7,7 @@ struct SettingsView: View {
     @AppStorage("idleThresholdMinutes") private var idleThresholdMinutes: Int = 2
     @AppStorage("launchAtLogin") private var launchAtLogin: Bool = false
     @AppStorage("showMenuBarTotal") private var showMenuBarTotal: Bool = false
+    @AppStorage("showMenuBarScore") private var showMenuBarScore: Bool = true
     @AppStorage("streakGoal") private var streakGoal: Int = 60
 
     // Recent sessions feed the category list (Settings scene has the container)
@@ -160,6 +161,7 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.red)
             }
+            Toggle("Show focus score in the menu bar", isOn: $showMenuBarScore)
             Toggle("Show today's total in the menu bar", isOn: $showMenuBarTotal)
         }
     }
