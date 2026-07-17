@@ -1,12 +1,18 @@
 import SwiftUI
 import Charts
 
-// The full analytics window, opened from the popover
+// The full analytics window, opened from the popover. Renders from a cached
+// DashboardModel; analytics recompute on open, range change, or the slow
+// timer — never per render pass.
 struct DashboardView: View {
     @EnvironmentObject var watcher: AppWatcher
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("streakGoal") private var streakGoal = 60
     @State private var rangeDays = 7
     @State private var selectedDay: Date?
+    @State private var model: DashboardModel?
+
+    private let refreshTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     // Snap the hover selection to whole days: the bubble pop then fires once
     // per bar instead of re-triggering on every pixel of cursor movement
@@ -21,58 +27,62 @@ struct DashboardView: View {
         selectedDay.map { Calendar.current.startOfDay(for: $0) == day } ?? false
     }
 
-    private var periodStart: Date {
-        let calendar = Calendar.current
-        let todayStart = calendar.startOfDay(for: Date())
-        return calendar.date(byAdding: .day, value: -(rangeDays - 1), to: todayStart) ?? todayStart
-    }
-
-    private var sessions: [AppSessionModel] {
-        watcher.fetchSessions(since: periodStart)
-    }
-
-    // The equal-length window immediately before this one, for trends
-    private var previousSessions: [AppSessionModel] {
-        let calendar = Calendar.current
-        guard let previousStart = calendar.date(byAdding: .day, value: -rangeDays, to: periodStart) else {
-            return []
-        }
-        return watcher.fetchSessions(since: previousStart)
-            .filter { $0.startTime < periodStart }
-    }
-
     var body: some View {
-        let stats = AnalyticsEngine.stats(for: sessions)
-
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
-                statTiles(stats)
-                FocusCardsView()
-                card(
-                    "Daily breakdown",
-                    subtitle: averageHours > 0
-                        ? "dashed line marks your average: \(formatDuration(averageHours * 3600)) per active day"
-                        : nil,
-                    pops: false
-                ) { dailyChart }
-                HStack(alignment: .top, spacing: 16) {
-                    card("Trends", subtitle: "vs. the previous \(rangeDays) days") {
-                        trendsContent
+                if let model {
+                    statTiles(model.stats)
+                    FocusCardsView(
+                        focus: model.focusToday,
+                        streakCurrent: model.streakCurrent,
+                        streakBest: model.streakBest,
+                        streakGoal: streakGoal,
+                        golden: model.golden,
+                        villain: model.villain
+                    )
+                    card(
+                        "Daily breakdown",
+                        subtitle: model.averageHours > 0
+                            ? "dashed line marks your average: \(formatDuration(model.averageHours * 3600)) per active day"
+                            : nil,
+                        pops: false
+                    ) { dailyChart(model) }
+                    HStack(alignment: .top, spacing: 16) {
+                        card("Trends", subtitle: "vs. the previous \(rangeDays) days") {
+                            trendsContent(model)
+                        }
+                        card("Records", subtitle: "personal bests, all time") {
+                            recordsContent(model)
+                        }
                     }
-                    card("Records", subtitle: "personal bests, all time") {
-                        recordsContent
+                    card("Work rhythm", subtitle: "when your tracked time happens") {
+                        WorkRhythmView(cells: model.fingerprint)
                     }
+                    card("Top apps & sites") { topAppsList(model.stats) }
                 }
-                card("Work rhythm", subtitle: "when your tracked time happens") {
-                    WorkRhythmView(cells: AnalyticsEngine.fingerprint(for: sessions))
-                }
-                card("Top apps & sites") { topAppsList(stats) }
             }
             .padding(24)
         }
         .frame(minWidth: 860, minHeight: 620)
         .background(.background)
+        .onAppear(perform: reload)
+        .onChange(of: rangeDays) { _, _ in reload() }
+        .onChange(of: streakGoal) { _, _ in reload() }
+        .onReceive(refreshTimer) { _ in reloadIfVisible() }
+    }
+
+    private func reload() {
+        model = DashboardModel.load(watcher: watcher, rangeDays: rangeDays, streakGoal: streakGoal)
+    }
+
+    // The window outlives its closes (isReleasedWhenClosed = false), so skip
+    // timer refreshes while it's hidden
+    private func reloadIfVisible() {
+        guard NSApp.windows.contains(where: { $0.isVisible && $0.title == "Timeprint Analytics" }) else {
+            return
+        }
+        reload()
     }
 
     // MARK: — Layout helpers
@@ -168,16 +178,15 @@ struct DashboardView: View {
     // MARK: — Trends
 
     @ViewBuilder
-    private var trendsContent: some View {
-        let trends = AnalyticsEngine.trends(current: sessions, previous: previousSessions)
-        if trends.risers.isEmpty && trends.fallers.isEmpty {
+    private func trendsContent(_ model: DashboardModel) -> some View {
+        if model.trends.risers.isEmpty && model.trends.fallers.isEmpty {
             Text("Not enough history yet — check back after a few days.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                ForEach(trends.risers) { trendRow($0, rising: true) }
-                ForEach(trends.fallers) { trendRow($0, rising: false) }
+                ForEach(model.trends.risers) { trendRow($0, rising: true) }
+                ForEach(model.trends.fallers) { trendRow($0, rising: false) }
             }
         }
     }
@@ -202,20 +211,19 @@ struct DashboardView: View {
     // MARK: — Records
 
     @ViewBuilder
-    private var recordsContent: some View {
-        let records = AnalyticsEngine.records(allSessions: watcher.fetchSessions(since: .distantPast))
+    private func recordsContent(_ model: DashboardModel) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            if let longest = records.longestBlock {
+            if let longest = model.records.longestBlock {
                 recordRow(symbol: "flame.fill", tint: .orange,
                           title: "Longest session — \(formatDuration(longest.duration))",
                           detail: "\(longest.app), \(longest.day.formatted(date: .abbreviated, time: .omitted))")
             }
-            if let biggest = records.biggestDay {
+            if let biggest = model.records.biggestDay {
                 recordRow(symbol: "trophy.fill", tint: .yellow,
                           title: "Biggest day — \(formatDuration(biggest.duration))",
                           detail: biggest.day.formatted(date: .complete, time: .omitted))
             }
-            if records.longestBlock == nil && records.biggestDay == nil {
+            if model.records.longestBlock == nil && model.records.biggestDay == nil {
                 Text("Records appear once you've tracked some time.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -243,40 +251,12 @@ struct DashboardView: View {
 
     // MARK: — Daily breakdown (Screen Time-style)
 
-    private struct DayTotal: Identifiable {
-        let day: Date
-        let seconds: TimeInterval
-        var id: Date { day }
-        var hours: Double { seconds / 3600 }
-    }
-
-    private var dayTotals: [DayTotal] {
-        let calendar = Calendar.current
-        var totals: [Date: TimeInterval] = [:]
-        for session in sessions {
-            totals[calendar.startOfDay(for: session.startTime), default: 0] += session.duration
-        }
-        let todayStart = calendar.startOfDay(for: Date())
-        return (0..<rangeDays).compactMap { offset in
-            guard let day = calendar.date(byAdding: .day, value: -offset, to: todayStart) else { return nil }
-            return DayTotal(day: day, seconds: totals[day] ?? 0)
-        }
-        .sorted { $0.day < $1.day }
-    }
-
-    private var averageHours: Double {
-        let tracked = dayTotals.filter { $0.seconds > 0 }
-        guard !tracked.isEmpty else { return 0 }
-        return tracked.reduce(0) { $0 + $1.hours } / Double(tracked.count)
-    }
-
-    private var dailyChart: some View {
-        let totals = dayTotals
+    private func dailyChart(_ model: DashboardModel) -> some View {
         let today = Calendar.current.startOfDay(for: Date())
 
         return VStack(alignment: .leading, spacing: 8) {
             Chart {
-                ForEach(totals) { item in
+                ForEach(model.dayTotals) { item in
                     BarMark(
                         x: .value("Day", item.day, unit: .day),
                         y: .value("Hours", item.hours),
@@ -295,13 +275,13 @@ struct DashboardView: View {
                 }
                 // Labeled in the card subtitle — an annotation here crowds
                 // the y-axis labels
-                if averageHours > 0 {
-                    RuleMark(y: .value("Average", averageHours))
+                if model.averageHours > 0 {
+                    RuleMark(y: .value("Average", model.averageHours))
                         .foregroundStyle(.secondary.opacity(0.45))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
                 }
             }
-            .chartYScale(domain: 0...max(1, (totals.map(\.hours).max() ?? 0) * 1.25))
+            .chartYScale(domain: 0...max(1, (model.dayTotals.map(\.hours).max() ?? 0) * 1.25))
             .chartXAxis {
                 AxisMarks(values: .stride(by: .day, count: rangeDays > 14 ? 3 : 1)) { _ in
                     AxisValueLabel(
@@ -324,13 +304,12 @@ struct DashboardView: View {
             .animation(reduceMotion ? nil : .spring(duration: 0.3, bounce: 0.45), value: selectedDay)
             .frame(height: 180)
 
-            daySummary
+            daySummary(model)
         }
     }
 
     private func barStyle(for day: Date, today: Date) -> AnyShapeStyle {
-        let isSelected = selectedDay.map { Calendar.current.startOfDay(for: $0) == day } ?? false
-        if day == today || isSelected {
+        if day == today || isSelected(day) {
             return AnyShapeStyle(
                 LinearGradient(
                     colors: [.accentColor, .accentColor.opacity(0.55)],
@@ -344,13 +323,13 @@ struct DashboardView: View {
 
     // Constant height in both states so appearing/disappearing selection
     // doesn't resize the card while the cursor is over the chart
-    private var daySummary: some View {
+    private func daySummary(_ model: DashboardModel) -> some View {
         Group {
             if let selectedDay {
                 let calendar = Calendar.current
                 let day = calendar.startOfDay(for: selectedDay)
                 let dayStats = AnalyticsEngine.stats(
-                    for: sessions.filter { calendar.startOfDay(for: $0.startTime) == day }
+                    for: model.sessions.filter { calendar.startOfDay(for: $0.startTime) == day }
                 )
                 HStack(spacing: 14) {
                     Text(day, format: .dateTime.weekday(.wide).month().day())

@@ -2,31 +2,28 @@ import SwiftUI
 
 // The scattrd side of the merged app: focus score, streak, golden hours and
 // the monthly App Villain — rendered in Timeprint's card language
+// Pure view: all analytics are computed once in DashboardModel and passed in,
+// so scrolling never re-runs them
 struct FocusCardsView: View {
-    @EnvironmentObject var watcher: AppWatcher
-    @AppStorage("streakGoal") private var streakGoal = 60
+    let focus: FocusDayStats
+    let streakCurrent: Int
+    let streakBest: Int
+    let streakGoal: Int
+    let golden: FocusFeatures.GoldenWindow
+    let villain: FocusFeatures.Villain
 
     var body: some View {
-        let calendar = Calendar.current
-        let todayStart = calendar.startOfDay(for: Date())
-        let history = watcher.fetchSessions(since: .distantPast)
-        let byDay = FocusFeatures.sessionsByDay(history)
-        let todayStats = FocusScore.analyze(byDay[todayStart] ?? [])
-        let goldenStart = calendar.date(byAdding: .day, value: -20, to: todayStart) ?? todayStart
-
         VStack(spacing: 16) {
             HStack(alignment: .top, spacing: 16) {
-                scoreCard(todayStats)
+                scoreCard(focus)
                     .frame(maxWidth: .infinity)
                 VStack(spacing: 16) {
-                    streakCard(byDay: byDay)
-                    goldenHoursCard(
-                        FocusFeatures.goldenHours(sessions: history.filter { $0.startTime >= goldenStart })
-                    )
+                    streakCard
+                    goldenHoursCard(golden)
                 }
                 .frame(width: 260)
             }
-            villainCard(FocusFeatures.villain(byDay: byDay))
+            villainCard(villain)
         }
     }
 
@@ -125,21 +122,19 @@ struct FocusCardsView: View {
 
     // MARK: — Streak
 
-    private func streakCard(byDay: [Date: [AppSessionModel]]) -> some View {
-        let current = FocusFeatures.currentStreak(byDay: byDay, threshold: streakGoal)
-        let best = FocusFeatures.bestStreak(byDay: byDay, threshold: streakGoal)
-        return card("Focus streak", subtitle: "days scoring \(streakGoal)+") {
+    private var streakCard: some View {
+        card("Focus streak", subtitle: "days scoring \(streakGoal)+") {
             HStack(spacing: 10) {
                 Image(systemName: "flame.fill")
                     .font(.title2)
-                    .foregroundStyle(current > 0 ? .orange : .secondary)
-                Text("\(current)")
+                    .foregroundStyle(streakCurrent > 0 ? .orange : .secondary)
+                Text("\(streakCurrent)")
                     .font(.title.monospacedDigit().weight(.bold))
-                Text(current == 1 ? "day" : "days")
+                Text(streakCurrent == 1 ? "day" : "days")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("best \(best)")
+                Text("best \(streakBest)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
