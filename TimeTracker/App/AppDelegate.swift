@@ -40,7 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 rootView: DashboardView().environmentObject(watcher)
             )
             let window = NSWindow(contentViewController: hosting)
-            window.title = "TimeTracker Analytics"
+            window.title = "Timeprint Analytics"
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             window.setContentSize(NSSize(width: 920, height: 680))
             // Keep the window (and its view state) alive across closes
@@ -59,7 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         guard let button = statusItem.button else { return }
-        button.image = NSImage(systemSymbolName: "clock.fill", accessibilityDescription: "Time Tracker")
+        button.image = NSImage(systemSymbolName: "clock.fill", accessibilityDescription: "Timeprint")
         button.action = #selector(togglePopover(_:))
         button.target = self
     }

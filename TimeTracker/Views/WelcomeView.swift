@@ -14,10 +14,10 @@ struct WelcomeView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 28)
             icon
-            Text("TimeTracker")
+            Text("Timeprint")
                 .font(.title2.weight(.semibold))
                 .padding(.top, 18)
-            Text("Know where your time goes")
+            Text("The print your time leaves behind")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .padding(.top, 2)

@@ -45,7 +45,7 @@ struct MenuBarPopoverView: View {
     private var headerView: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Time Tracker")
+                Text("Timeprint")
                     .font(.headline)
                 Text(Date(), style: .date)
                     .font(.caption)

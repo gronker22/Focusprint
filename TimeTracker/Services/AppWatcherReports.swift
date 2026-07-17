@@ -70,7 +70,7 @@ extension AppWatcher {
             throw CocoaError(.fileNoSuchFile)
         }
 
-        let url = downloads.appendingPathComponent("timetracker-export.csv")
+        let url = downloads.appendingPathComponent("timeprint-export.csv")
         try csv.write(to: url, atomically: true, encoding: .utf8)
         return url
     }
