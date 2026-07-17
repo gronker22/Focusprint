@@ -80,7 +80,7 @@ struct DashboardView: View {
     // The window outlives its closes (isReleasedWhenClosed = false), so skip
     // timer refreshes while it's hidden
     private func reloadIfVisible() {
-        guard NSApp.windows.contains(where: { $0.isVisible && $0.title == "Timeprint Analytics" }) else {
+        guard NSApp.windows.contains(where: { $0.isVisible && $0.title == "Focusprint Analytics" }) else {
             return
         }
         reload()

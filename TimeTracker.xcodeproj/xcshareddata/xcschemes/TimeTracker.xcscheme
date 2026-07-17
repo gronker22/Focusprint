@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A100000000000000000000A5"
-               BuildableName = "Timeprint.app"
+               BuildableName = "Focusprint.app"
                BlueprintName = "TimeTracker"
                ReferencedContainer = "container:TimeTracker.xcodeproj">
             </BuildableReference>
@@ -44,7 +44,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A100000000000000000000A5"
-            BuildableName = "Timeprint.app"
+            BuildableName = "Focusprint.app"
             BlueprintName = "TimeTracker"
             ReferencedContainer = "container:TimeTracker.xcodeproj">
          </BuildableReference>
@@ -61,7 +61,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A100000000000000000000A5"
-            BuildableName = "Timeprint.app"
+            BuildableName = "Focusprint.app"
             BlueprintName = "TimeTracker"
             ReferencedContainer = "container:TimeTracker.xcodeproj">
          </BuildableReference>

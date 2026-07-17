@@ -1,7 +1,7 @@
 import SwiftUI
 
 // The scattrd side of the merged app: focus score, streak, golden hours and
-// the monthly App Villain — rendered in Timeprint's card language
+// the monthly App Villain — rendered in Focusprint's card language
 // Pure view: all analytics are computed once in DashboardModel and passed in,
 // so scrolling never re-runs them
 struct FocusCardsView: View {

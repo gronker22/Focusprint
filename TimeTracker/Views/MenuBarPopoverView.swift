@@ -46,7 +46,7 @@ struct MenuBarPopoverView: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text("Timeprint")
+                    Text("Focusprint")
                         .font(.headline)
                     focusChip
                 }

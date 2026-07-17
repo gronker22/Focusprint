@@ -14,7 +14,7 @@ struct WelcomeView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 28)
             icon
-            Text("Timeprint")
+            Text("Focusprint")
                 .font(.title2.weight(.semibold))
                 .padding(.top, 18)
             Text("The print your time leaves behind")

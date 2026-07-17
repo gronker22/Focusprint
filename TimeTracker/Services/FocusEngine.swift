@@ -29,7 +29,7 @@ struct FocusDayStats {
     )
 }
 
-// scattrd's FocusScore engine (scoring v7), ported verbatim onto Timeprint's
+// scattrd's FocusScore engine (scoring v7), ported verbatim onto Focusprint's
 // SwiftData sessions. Score = 40% sustain + 35% switching + 25% deep work.
 enum FocusScore {
 
