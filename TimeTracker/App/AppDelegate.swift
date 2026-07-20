@@ -35,15 +35,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: — Analytics dashboard window
 
     private func showDashboard() {
-        if dashboardWindow == nil {
-            let hosting = NSHostingController(
-                rootView: DashboardView().environmentObject(watcher)
-            )
+        // Fresh content every open: reusing the old hosting view kept the
+        // previous scroll offset, so the window reopened scrolled to wherever
+        // it was left (usually the bottom). The window object itself persists,
+        // preserving its size and screen position.
+        let hosting = NSHostingController(
+            rootView: DashboardView().environmentObject(watcher)
+        )
+        if let window = dashboardWindow {
+            window.contentViewController = hosting
+        } else {
             let window = NSWindow(contentViewController: hosting)
             window.title = "Focusprint Analytics"
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             window.setContentSize(NSSize(width: 920, height: 680))
-            // Keep the window (and its view state) alive across closes
             window.isReleasedWhenClosed = false
             window.center()
             dashboardWindow = window
