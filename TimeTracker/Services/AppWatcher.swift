@@ -97,6 +97,48 @@ class AppWatcher: ObservableObject {
                 bundleID: app.bundleIdentifier ?? "unknown"
             )
         }
+
+        startSleepWatching()
+    }
+
+    // Sleeping with a session open would otherwise bank the whole sleep as
+    // usage — close the lid at 6pm, open at 9am, and you'd "work" 15 hours
+    private func startSleepWatching() {
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [
+            NSWorkspace.willSleepNotification,          // system sleep
+            NSWorkspace.screensDidSleepNotification,    // display off
+            NSWorkspace.sessionDidResignActiveNotification,  // fast user switch
+        ] {
+            center.publisher(for: name)
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in self?.suspendForSleep() }
+                .store(in: &cancellables)
+        }
+
+        for name in [
+            NSWorkspace.didWakeNotification,
+            NSWorkspace.screensDidWakeNotification,
+            NSWorkspace.sessionDidBecomeActiveNotification,
+        ] {
+            center.publisher(for: name)
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in self?.resumeFromSleep() }
+                .store(in: &cancellables)
+        }
+    }
+
+    private func suspendForSleep() {
+        closeCurrentSession(at: Date())
+        isIdle = true
+    }
+
+    private func resumeFromSleep() {
+        guard isTracking else { return }
+        isIdle = false
+        // Nothing may activate after waking if the same app stays frontmost,
+        // so start the new session explicitly
+        resumeWithFrontmostApp()
     }
 
     // MARK: — Timers

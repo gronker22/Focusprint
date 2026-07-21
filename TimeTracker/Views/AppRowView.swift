@@ -16,19 +16,9 @@ struct AppRowView: View {
         return min(duration / totalTime, 1.0)
     }
 
-    // Try to find the app icon from the running apps list. Browser-tab
-    // entries look like "youtube.com · Google Chrome", so fall back to
-    // suffix matching to still show the browser's icon.
-    private var appIcon: NSImage? {
-        let apps = NSWorkspace.shared.runningApplications
-        if let exact = apps.first(where: { $0.localizedName == appName }) {
-            return exact.icon
-        }
-        return apps.first { app in
-            guard let name = app.localizedName, !name.isEmpty else { return false }
-            return appName.hasSuffix("· \(name)")
-        }?.icon
-    }
+    // Icons are looked up through a cache: scanning every running app, for
+    // every row, on every render was a real cost with the popover open
+    private var appIcon: NSImage? { AppIconCache.icon(for: appName) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {

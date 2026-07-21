@@ -12,7 +12,10 @@ struct DashboardView: View {
     @State private var selectedDay: Date?
     @State private var model: DashboardModel?
 
-    private let refreshTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
+    // 60s rather than 30s, and every fire bails immediately while the window
+    // is hidden — the view outlives its window, so this keeps ticking after
+    // you close the dashboard
+    private let refreshTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
     // Snap the hover selection to whole days: the bubble pop then fires once
     // per bar instead of re-triggering on every pixel of cursor movement
@@ -71,6 +74,11 @@ struct DashboardView: View {
         .onChange(of: streakGoal) { _, _ in reload() }
         .onReceive(refreshTimer) { _ in reloadIfVisible() }
         .onReceive(NotificationCenter.default.publisher(for: .categoriesChanged)) { _ in reload() }
+        // Coming back to the window should show current numbers immediately
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { note in
+            guard (note.object as? NSWindow)?.title == "Focusprint Analytics" else { return }
+            reload()
+        }
     }
 
     private func reload() {
